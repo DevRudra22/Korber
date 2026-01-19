@@ -1,78 +1,51 @@
-/*
 package com.korber.inventory.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import com.korber.inventory.dto.InventoryResponse;
+import com.korber.inventory.model.InventoryBatch;
+import com.korber.inventory.service.strategy.InventoryStrategy;
+import com.korber.inventory.service.strategy.InventoryStrategyFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
-import com.korber.inventory.model.InventoryBatch;
-import com.korber.inventory.repository.InventoryBatchRepository;
-import java.time.LocalDate;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import org.junit.jupiter.api.Test;
-
+@ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
 
-  @Test
-  void reserveAndUpdate_deductsFromEarliestBatches() {
-    InventoryBatchRepository repo = mock(InventoryBatchRepository.class);
-    InventoryAllocationStrategyFactory factory = mock(InventoryAllocationStrategyFactory.class);
-    InventoryAllocationStrategy strategy = mock(InventoryAllocationStrategy.class);
+    @Mock
+    private InventoryStrategyFactory strategyFactory;
 
-    when(factory.getOrDefault(null)).thenReturn(strategy);
+    @Mock
+    private InventoryStrategy inventoryStrategy;
 
-    InventoryBatch b1 =
-        new InventoryBatch(1L, 1001L, "Laptop", 5, LocalDate.parse("2026-01-01"));
-    InventoryBatch b2 =
-        new InventoryBatch(2L, 1001L, "Laptop", 5, LocalDate.parse("2026-02-01"));
+    @InjectMocks
+    private InventoryServiceImpl inventoryService;
 
-    when(repo.findByProductIdOrderByExpiryDateAsc(1001L)).thenReturn(List.of(b1, b2));
-    Map<Long, Integer> deductions = new LinkedHashMap<>();
-    deductions.put(1L, 5);
-    deductions.put(2L, 2);
-    when(strategy.allocate(anyList(), eq(7))).thenReturn(AllocationPlan.of(deductions));
+    @Test
+    void shouldReturnInventorySortedByExpiry() {
 
-    InventoryService service = new InventoryService(repo, factory);
-    var resp =
-        service.reserveAndUpdate(
-            new InventoryUpdateRequest(1001L, 7, null));
+        InventoryBatch batch = new InventoryBatch();
+        batch.setBatchId(1L);
+        batch.setProductId(1001L);
+        batch.setProductName("Laptop");
+        batch.setQuantity(50);
+        batch.setExpiryDate(LocalDate.now().plusDays(10));
 
-    assertThat(resp.getReservedQuantity()).isEqualTo(7);
-    assertThat(resp.getReservedFromBatchIds()).containsExactly(1L, 2L);
-    assertThat(b1.getQuantity()).isEqualTo(0);
-    assertThat(b2.getQuantity()).isEqualTo(3);
-    verify(repo).saveAll(anyList());
-  }
+        when(strategyFactory.getStrategy("EXPIRY")).thenReturn(inventoryStrategy);
+        when(inventoryStrategy.getBatches(1001L)).thenReturn(List.of(batch));
 
-  @Test
-  void reserveAndUpdate_throwsWhenInsufficient() {
-    InventoryBatchRepository repo = mock(InventoryBatchRepository.class);
-    InventoryAllocationStrategyFactory factory = mock(InventoryAllocationStrategyFactory.class);
-    InventoryAllocationStrategy strategy = mock(InventoryAllocationStrategy.class);
+        InventoryResponse response = inventoryService.getInventory(1001L);
 
-    when(factory.getOrDefault(null)).thenReturn(strategy);
-
-    InventoryBatch b1 =
-        new InventoryBatch(1L, 1001L, "Laptop", 2, LocalDate.parse("2026-01-01"));
-
-    when(repo.findByProductIdOrderByExpiryDateAsc(1001L)).thenReturn(List.of(b1));
-    when(strategy.allocate(anyList(), eq(3))).thenReturn(AllocationPlan.of(Map.of(1L, 2)));
-
-    InventoryService service = new InventoryService(repo, factory);
-
-    assertThatThrownBy(
-            () ->
-                service.reserveAndUpdate(
-                    new InventoryUpdateRequest(1001L, 3, null)))
-        .isInstanceOf(InsufficientInventoryException.class);
-  }
+        assertEquals(1001L, response.getProductId());
+        assertEquals("Laptop", response.getProductName());
+        assertEquals(1, response.getBatches().size());
+    }
 }
 
-
-*/

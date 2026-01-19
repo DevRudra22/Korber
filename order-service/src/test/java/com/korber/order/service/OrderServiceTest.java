@@ -1,12 +1,12 @@
-/*
-package src.test.java.com.korber.order.service;
+package com.korber.order.service;
 
+import com.korber.inventory.dto.BatchResponse;
 import com.korber.inventory.dto.InventoryResponse;
-import com.korber.inventory.model.InventoryBatch;
-import com.korber.inventory.service.InventoryServiceImpl;
-import com.korber.inventory.service.strategy.InventoryStrategy;
-import com.korber.inventory.service.strategy.InventoryStrategyFactory;
 import com.korber.order.client.InventoryClient;
+import com.korber.order.dto.OrderRequest;
+import com.korber.order.dto.OrderResponse;
+import com.korber.order.model.Order;
+import com.korber.order.repository.OrderRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,6 +17,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +37,6 @@ class OrderServiceTest {
     @Test
     void shouldPlaceOrderSuccessfully() {
 
-        // GIVEN
         OrderRequest request = new OrderRequest();
         request.setProductId(1002L);
         request.setQuantity(3);
@@ -48,10 +50,8 @@ class OrderServiceTest {
         when(inventoryClient.getInventory(1002L)).thenReturn(inventoryResponse);
         when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
 
-        // WHEN
         OrderResponse response = orderService.placeOrder(request);
 
-        // THEN
         assertNotNull(response);
         assertEquals("PLACED", response.getStatus());
         assertEquals(3, response.getQuantity());
@@ -62,5 +62,3 @@ class OrderServiceTest {
         verify(orderRepository).save(any(Order.class));
     }
 }
-
-*/
